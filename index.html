@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#DAD6CC">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Quota — Diario di Guida</title>
+<style>
+:root{
+  --stone: #DAD6CC;
+  --stone-light: #F1EFE7;
+  --stone-dark: #C7C2B4;
+  --ink: #211F1A;
+  --ink-dim: #6B6656;
+  --ink-faint: #9C9686;
+  --orange: #E8590C;
+  --orange-dark: #B8430A;
+  --orange-tint: #FBE3D2;
+  --teal: #1D6E73;
+  --teal-tint: #DCEAEA;
+  --gold: #A6801F;
+  --gold-tint: #EFE6C9;
+  --danger: #A93226;
+  --line: rgba(34,32,26,0.12);
+  --line-strong: rgba(34,32,26,0.22);
+  --shadow: 0 8px 22px rgba(34,32,26,0.14);
+  --shadow-lg: 0 18px 44px rgba(34,32,26,0.22);
+  --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body{ height:100%; }
+body{
+  background: var(--stone);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow:hidden;
+  text-size-adjust:100%; -webkit-text-size-adjust:100%;
+}
+
+/* ============= TOPBAR ============= */
+.topbar{
+  height:56px; display:flex; align-items:center; justify-content:space-between;
+  padding: 0 14px; background: var(--stone);
+  border-bottom: 1px solid var(--line-strong);
+}
+.round-btn{
+  width:38px; height:38px; border-radius:10px; border:1px solid var(--line-strong);
+  background: var(--stone-light); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color: var(--ink);
+}
+.round-btn svg{ width:18px; height:18px; }
+.brand{ font-family: var(--font-display); font-weight:800; font-size:13px; letter-spacing:0.14em; text-transform:uppercase; }
+.brand small{ display:block; font-family: var(--font-mono); font-weight:400; font-size:9px; letter-spacing:0.08em; color: var(--ink-dim); text-transform:none; margin-top:1px; }
+
+/* ============= VIEW STACK ============= */
+.view-stack{ position:relative; height: calc(100vh - 56px); overflow:hidden; }
+.view{
+  position:absolute; inset:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  background: var(--stone); transition: transform 0.32s cubic-bezier(.4,0,.2,1);
+  padding-bottom: 100px;
+}
+#view-diario{ transform: translateX(0); }
+#view-materiale{ transform: translateX(100%); }
+#view-statistiche{ transform: translateX(100%); }
+.view-inner{ max-width: 640px; margin:0 auto; padding: 16px 16px 0; }
+
+.view-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.view-header h1{ font-family: var(--font-display); font-weight:800; font-size:22px; letter-spacing:-0.01em; }
+.view-eyebrow{ font-family: var(--font-mono); font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase; color: var(--ink-faint); margin-top:2px; }
+
+/* ============= SEARCH ============= */
+.search-wrap{ overflow:hidden; max-height:0; transition:max-height 0.2s ease, margin-bottom 0.2s ease; margin-bottom:0; }
+.search-wrap.open{ max-height:60px; margin-bottom:12px; }
+.search-bar{ display:flex; align-items:center; gap:8px; background: var(--stone-light); border:1px solid var(--line-strong); border-radius:10px; padding:9px 12px; }
+.search-bar svg{ width:16px; height:16px; color: var(--ink-faint); flex-shrink:0; }
+.search-bar input{ border:none; outline:none; background:transparent; font-family: var(--font-body); font-size:16px; color: var(--ink); width:100%; }
+
+/* ============= PILLS ============= */
+.pill-row{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:14px; }
+.pill{
+  font-family: var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:0.03em;
+  padding: 8px 13px; border-radius:8px; border:1.5px solid var(--line-strong); background: var(--stone-light);
+  color: var(--ink-dim); cursor:pointer; display:flex; align-items:center; gap:5px;
+}
+.pill.active-orange{ border-color: var(--orange); color: var(--orange-dark); background: var(--orange-tint); }
+.pill.active-teal{ border-color: var(--teal); color: var(--teal); background: var(--teal-tint); }
+.pill.active-gold{ border-color: var(--gold); color: var(--gold); background: var(--gold-tint); }
+
+/* ============= TIMELINE FEED ============= */
+.month-hdr{
+  font-family: var(--font-mono); font-weight:600; font-size:11px; letter-spacing:0.12em; text-transform:uppercase;
+  color: var(--ink-faint); padding: 14px 0 8px; position:sticky; top:0; background: var(--stone); z-index:2;
+}
+.month-hdr:first-child{ padding-top:0; }
+
+/* ============= GEAR TAG CARD (signature element) ============= */
+.tag-card{
+  position:relative; background: var(--stone-light); border:1px solid var(--line-strong);
+  border-radius: 4px 10px 10px 4px; margin-bottom:10px; padding: 13px 14px 13px 20px;
+  cursor:pointer; display:flex; gap:12px; align-items:flex-start;
+  box-shadow: 0 1px 2px rgba(34,32,26,0.06);
+}
+.tag-card:active{ background: var(--stone); }
+.tag-stripe{ position:absolute; left:0; top:6px; bottom:6px; width:4px; border-radius:2px; background: var(--orange); }
+.tag-stripe.teal{ background: var(--teal); }
+.tag-stripe.gold{ background: var(--gold); }
+.tag-hole{
+  position:absolute; left:5px; top:50%; transform:translateY(-50%); width:8px; height:8px;
+  border-radius:50%; background: var(--stone); border:1px solid var(--stone-dark);
+}
+.tag-date{ flex-shrink:0; width:42px; text-align:center; padding-top:1px; }
+.tag-date .day{ font-family: var(--font-display); font-weight:800; font-size:19px; line-height:1; }
+.tag-date .mon{ font-family: var(--font-mono); font-size:9px; text-transform:uppercase; color: var(--ink-faint); letter-spacing:0.04em; }
+.tag-body{ flex:1; min-width:0; }
+.tag-title{ font-family: var(--font-display); font-weight:700; font-size:15px; color: var(--ink); line-height:1.25; }
+.tag-tags{ display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; }
+.tag-chip{
+  font-family: var(--font-mono); font-size:9.5px; text-transform:uppercase; letter-spacing:0.03em;
+  padding:2px 7px; border-radius:4px; border:1px solid var(--line-strong); color: var(--ink-dim);
+}
+.tag-snippet{ font-size:12.5px; color: var(--ink-dim); margin-top:6px; line-height:1.4;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.tag-thumbs{ display:flex; gap:4px; margin-top:7px; }
+.tag-thumbs img{ width:30px; height:30px; object-fit:cover; border-radius:5px; border:1px solid var(--line-strong); }
+.tag-client{
+  position:absolute; top:8px; right:10px; font-family: var(--font-mono); font-size:8.5px; font-weight:700;
+  letter-spacing:0.05em; color:#fff; background: var(--ink); padding:2px 7px; border-radius:4px;
+}
+
+.empty{ text-align:center; padding: 44px 18px; color: var(--ink-dim); border:1px dashed var(--line-strong); border-radius:10px; margin-top:10px; }
+.empty b{ display:block; font-family: var(--font-display); font-size:16px; color: var(--ink); margin-bottom:6px; }
+
+/* ============= FAB ============= */
+.fab{
+  position:fixed; right:20px; bottom:26px; width:56px; height:56px; border-radius:16px;
+  background: var(--orange); color:#fff; border:none; box-shadow: var(--shadow-lg);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:40;
+}
+.fab svg{ width:24px; height:24px; }
+.fab.hidden{ display:none; }
+
+/* ============= DRAWER ============= */
+.drawer-backdrop{
+  position:fixed; inset:0; background:rgba(33,31,26,0.4); z-index:70; display:none;
+}
+.drawer-backdrop.show{ display:block; }
+.drawer{
+  position:fixed; top:0; left:0; bottom:0; width:80%; max-width:300px; background: var(--stone-light);
+  z-index:71; transform: translateX(-100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+  padding: 24px 18px; display:flex; flex-direction:column; box-shadow: var(--shadow-lg);
+}
+.drawer.show{ transform: translateX(0); }
+.drawer-brand{ font-family: var(--font-display); font-weight:800; font-size:18px; letter-spacing:0.02em; margin-bottom:2px; }
+.drawer-brand small{ display:block; font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); letter-spacing:0.06em; margin-top:2px; text-transform:uppercase; }
+.drawer-nav{ margin-top: 26px; display:flex; flex-direction:column; gap:4px; }
+.drawer-item{
+  display:flex; align-items:center; gap:12px; padding:12px 10px; border-radius:8px; border:none;
+  background:transparent; cursor:pointer; text-align:left; width:100%;
+  font-family: var(--font-display); font-weight:600; font-size:14.5px; color: var(--ink-dim);
+}
+.drawer-item svg{ width:19px; height:19px; flex-shrink:0; }
+.drawer-item.active{ background: var(--orange-tint); color: var(--orange-dark); }
+.drawer-divider{ height:1px; background: var(--line); margin:16px 0; }
+.drawer-item small{ display:block; font-family: var(--font-mono); font-size:9.5px; font-weight:400; color: var(--ink-faint); margin-top:1px; }
+.drawer-footer{ margin-top:auto; font-family: var(--font-mono); font-size:9.5px; color: var(--ink-faint); text-align:center; padding-top:14px; }
+
+/* ============= FULL SCREEN SHEETS ============= */
+.sheet{
+  position:fixed; inset:0; background: var(--stone-light); transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(.4,0,.2,1); z-index:60; overflow-y:auto; -webkit-overflow-scrolling:touch;
+}
+.sheet.show{ transform: translateY(0); }
+.sheet-topbar{
+  display:flex; align-items:center; justify-content:space-between; padding: 14px 16px;
+  position:sticky; top:0; background: var(--stone-light); border-bottom:1px solid var(--line); z-index:2;
+}
+.sheet-topbar-actions{ display:flex; gap:8px; }
+.sheet-content{ max-width:620px; margin:0 auto; padding: 20px 18px 70px; }
+
+/* ============= JOURNAL / TAG DETAIL PAGE ============= */
+.stamp-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.stamp{
+  font-family: var(--font-mono); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+  padding: 5px 11px; border:1.5px solid currentColor; border-radius:6px; transform: rotate(-1.2deg); display:inline-block;
+}
+.journal-title{ font-family: var(--font-display); font-weight:800; font-size:24px; letter-spacing:-0.01em; margin-bottom:8px; }
+.journal-meta{ font-family: var(--font-mono); font-size:11.5px; color: var(--ink-dim); margin-bottom:18px; display:flex; gap:12px; flex-wrap:wrap; }
+.box-label{ font-family: var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color: var(--ink-faint); margin-bottom:6px; }
+.field-note-box{
+  background: var(--stone); border-left:3px solid var(--orange); border-radius:0 8px 8px 0;
+  padding:12px 14px; font-family: var(--font-mono); font-size:12.5px; line-height:1.65; color: var(--ink); margin-bottom:18px;
+  white-space:pre-wrap;
+}
+.diary-note-box{ font-size:14.5px; line-height:1.65; color: var(--ink); margin-bottom:18px; white-space:pre-wrap; }
+.photo-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:18px; }
+.photo-grid img{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; border:1px solid var(--line-strong); }
+.actions-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+/* ============= BUTTONS / FIELDS ============= */
+button.primary{
+  background: var(--orange); color:#fff; border:none; font-family: var(--font-display); font-weight:700;
+  font-size:14px; padding:11px 18px; border-radius:9px; cursor:pointer;
+}
+button.primary:hover{ background: var(--orange-dark); }
+button.ghost{
+  background: var(--stone); border:1px solid var(--line-strong); color: var(--ink-dim);
+  font-family: var(--font-mono); font-size:12px; padding:10px 14px; border-radius:9px; cursor:pointer;
+}
+button.ghost:hover{ color: var(--ink); }
+button.danger-ghost{ color: var(--danger); border-color: var(--danger); background: transparent; font-family: var(--font-mono); font-size:12px; padding:10px 14px; border-radius:9px; cursor:pointer; }
+
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-family: var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color: var(--ink-dim); margin-bottom:5px; }
+.field input[type=text], .field input[type=date], .field input[type=number], .field select, .field textarea{
+  width:100%; border:1.5px solid var(--line-strong); background: var(--stone-light); color: var(--ink);
+  border-radius:9px; padding:10px 12px; font-family: var(--font-body); font-size:16px; outline:none;
+}
+.field input:focus, .field select:focus, .field textarea:focus{ border-color: var(--orange); }
+.field textarea{ resize:vertical; min-height:64px; font-family: var(--font-mono); font-size:13.5px; }
+.row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.checkbox-line{ display:flex; align-items:center; gap:8px; font-family: var(--font-mono); font-size:12px; color: var(--ink-dim); }
+.checkbox-line input{ width:16px; height:16px; accent-color: var(--orange); }
+
+.photo-upload-zone{
+  border:1.5px dashed var(--line-strong); border-radius:9px; padding:13px; text-align:center;
+  font-family: var(--font-mono); font-size:11.5px; color: var(--ink-dim); cursor:pointer; background: var(--stone);
+}
+.photo-preview-strip{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.photo-preview{ position:relative; width:58px; height:58px; }
+.photo-preview img{ width:100%; height:100%; object-fit:cover; border-radius:7px; }
+.photo-preview .rm{ position:absolute; top:-6px; right:-6px; background:var(--danger); color:#fff; border:none; width:18px; height:18px; border-radius:50%; font-size:11px; cursor:pointer; }
+
+/* ============= BOTTOM SHEET (partial) ============= */
+.bsheet-backdrop{ position:fixed; inset:0; background:rgba(33,31,26,0.35); z-index:65; display:none; }
+.bsheet-backdrop.show{ display:block; }
+.bottom-sheet{
+  position:fixed; left:0; right:0; bottom:0; max-height:70vh; background: var(--stone-light);
+  border-radius:16px 16px 0 0; z-index:66; transform: translateY(100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto; padding: 18px 18px 30px; box-shadow: var(--shadow-lg);
+}
+.bottom-sheet.show{ transform: translateY(0); }
+.bsheet-handle{ width:36px; height:4px; border-radius:2px; background: var(--line-strong); margin:0 auto 14px; }
+.bsheet-title{ font-family: var(--font-display); font-weight:700; font-size:16px; margin-bottom:12px; }
+.list-row{ padding:12px 10px; border-radius:8px; cursor:pointer; font-family: var(--font-body); font-size:14.5px; display:flex; justify-content:space-between; align-items:center; }
+.list-row.active{ background: var(--orange-tint); color: var(--orange-dark); font-weight:600; }
+
+/* ============= MATERIALE ============= */
+.mat-item-row{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.mat-item-row .dot{ width:5px; height:5px; border-radius:50%; background: var(--ink-faint); flex-shrink:0; }
+
+/* ============= STATS ============= */
+.big-stats{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px; }
+.big-stat{ background: var(--stone-light); border:1px solid var(--line); border-radius:10px; padding:14px; }
+.big-stat .num{ font-family: var(--font-display); font-size:24px; font-weight:800; color: var(--orange-dark); }
+.big-stat .lbl{ font-family: var(--font-mono); font-size:10px; color: var(--ink-dim); margin-top:2px; }
+.stat-block{ margin-bottom:20px; }
+.stat-block h4{ font-family: var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color: var(--ink-dim); margin-bottom:10px; }
+.bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+.bar-label{ font-family: var(--font-mono); font-size:10.5px; color: var(--ink-dim); width:112px; flex-shrink:0; }
+.bar-track{ flex:1; background: var(--stone); border-radius:5px; height:8px; overflow:hidden; }
+.bar-fill{ background: var(--orange); height:100%; border-radius:5px; }
+.bar-val{ font-family: var(--font-mono); font-size:10.5px; width:22px; text-align:right; }
+.note-line{ font-family: var(--font-mono); font-size:11px; color: var(--ink-faint); }
+
+/* ============= CALENDAR ============= */
+.cal-toggle{ display:flex; background: var(--stone); border-radius:9px; padding:3px; margin-bottom:14px; }
+.cal-tab{ flex:1; text-align:center; padding:8px; border-radius:7px; font-family: var(--font-mono); font-size:11.5px; color: var(--ink-dim); cursor:pointer; }
+.cal-tab.active{ background: var(--orange); color:#fff; }
+.cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cal-nav-btn{ background: var(--stone-light); border:1px solid var(--line); border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color: var(--ink-dim); }
+.cal-title{ font-family: var(--font-display); font-weight:700; font-size:14.5px; }
+.cal-year-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.cal-month-title{ font-family: var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; color: var(--ink-dim); margin-bottom:5px; }
+.cal-dots{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.cal-dot{ width:100%; aspect-ratio:1; border-radius:50%; background: var(--stone-dark); }
+.cal-dot.clickable{ cursor:pointer; }
+.dot-alp{ background: var(--orange) !important; }
+.dot-training{ background: var(--teal) !important; }
+.dot-both{ background: var(--gold) !important; }
+.cal-month-grid{ display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:38px; gap:5px; }
+.cal-weekday-hdr{ font-family: var(--font-mono); font-size:9.5px; color: var(--ink-faint); text-align:center; }
+.cal-day-cell{ height:38px; border-radius:8px; background: var(--stone-light); border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; font-family: var(--font-mono); font-size:10.5px; color: var(--ink-dim); gap:2px; }
+.cal-day-cell.empty{ background:transparent; border:none; }
+.cal-day-cell.clickable{ cursor:pointer; }
+.cal-week-row{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:9px; background: var(--stone-light); border:1px solid var(--line); margin-bottom:7px; }
+.cal-week-row.clickable{ cursor:pointer; }
+.cal-week-date{ font-family: var(--font-mono); font-size:11px; color: var(--ink-dim); width:58px; flex-shrink:0; }
+.cal-week-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; background: var(--stone-dark); }
+.cal-week-label{ font-size:13px; color: var(--ink); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cal-legend{ display:flex; gap:12px; margin-top:14px; font-family: var(--font-mono); font-size:10.5px; color: var(--ink-dim); flex-wrap:wrap; }
+.legend-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:middle; }
+
+.toast{
+  position:fixed; bottom:96px; left:50%; transform:translateX(-50%); background: var(--ink); color:#fff;
+  font-family: var(--font-mono); font-size:12px; padding:9px 18px; border-radius:9px; box-shadow: var(--shadow);
+  z-index:100; opacity:0; transition:opacity 0.25s ease; pointer-events:none; max-width:85vw; text-align:center;
+}
+.toast.show{ opacity:1; }
+
+::-webkit-scrollbar{ width:8px; }
+::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:4px; }
+@media (max-width:420px){ .row2{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="round-btn" id="menuBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+  </button>
+  <div class="brand">QUOTA<small>Diario di guida</small></div>
+  <div style="width:38px;"></div>
+</div>
+
+<div class="view-stack" id="viewStack">
+
+  <!-- VIEW: DIARIO -->
+  <div class="view" id="view-diario">
+    <div class="view-inner">
+      <div class="view-header">
+        <div>
+          <h1>Diario</h1>
+          <div class="view-eyebrow" id="diarioCount">0 attività registrate</div>
+        </div>
+        <button class="round-btn" id="searchToggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+      </div>
+      <div class="search-wrap" id="searchWrap">
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="Cerca — nome, zona, grado, montagna...">
+        </div>
+      </div>
+      <div class="pill-row" id="pillRow"></div>
+      <div id="feedWrap"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: MATERIALE -->
+  <div class="view" id="view-materiale">
+    <div class="view-inner">
+      <div class="view-header">
+        <div>
+          <h1>Materiale</h1>
+          <div class="view-eyebrow">Liste da copiare e condividere</div>
+        </div>
+      </div>
+      <div id="materialeGridWrap"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: STATISTICHE -->
+  <div class="view" id="view-statistiche">
+    <div class="view-inner">
+      <div class="view-header">
+        <div>
+          <h1>Statistiche</h1>
+          <div class="view-eyebrow">Uno sguardo d'insieme</div>
+        </div>
+      </div>
+      <div id="calendarWrap"></div>
+      <div id="statsPageContent"></div>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab" id="fabBtn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- DRAWER -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-brand">Quota<small>Diario di guida alpina</small></div>
+  <div class="drawer-nav">
+    <button class="drawer-item active" data-view="diario">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L9 8 L13 15 L16 10 L21 20 Z"/></svg>
+      Diario
+    </button>
+    <button class="drawer-item" data-view="materiale">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 L9 18 M15 4 L15 18 M9 4 L15 4 M9 18 L15 18"/><path d="M6 8 L9 8 M6 12 L9 12 M6 16 L9 16"/></svg>
+      Materiale
+    </button>
+    <button class="drawer-item" data-view="statistiche">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/></svg>
+      Statistiche
+    </button>
+  </div>
+  <div class="drawer-divider"></div>
+  <button class="drawer-item" id="drawerExport">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L12 14 M7 10 L12 15 L17 10"/><path d="M4 19 L20 19"/></svg>
+    <span>Esporta backup<small>Scarica un file di sicurezza</small></span>
+  </button>
+  <button class="drawer-item" id="drawerImport">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15 L12 4 M7 9 L12 4 L17 9"/><path d="M4 19 L20 19"/></svg>
+    <span>Importa backup<small>Carica un file salvato prima</small></span>
+  </button>
+  <input type="file" id="importFile" accept="application/json" style="display:none">
+  <div class="drawer-footer">Quota · diario locale su questo dispositivo</div>
+</div>
+
+<!-- FULL SCREEN SHEETS -->
+<div class="sheet" id="detailSheet"><div id="detailSheetInner"></div></div>
+<div class="sheet" id="formSheet"><div id="formSheetInner"></div></div>
+<div class="sheet" id="materialeFormSheet"><div id="materialeFormSheetInner"></div></div>
+<div class="sheet" id="materialeDetailSheet"><div id="materialeDetailSheetInner"></div></div>
+
+<!-- BOTTOM SHEETS -->
+<div class="bsheet-backdrop" id="bsheetBackdrop"></div>
+<div class="bottom-sheet" id="zoneBottomSheet"><div class="bsheet-handle"></div><div id="zoneBottomSheetInner"></div></div>
+<div class="bottom-sheet" id="dayListBottomSheet"><div class="bsheet-handle"></div><div id="dayListBottomSheetInner"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   TIPO DEFINITIONS (unchanged data model)
+============================================================ */
+const ALPINISTIC = ['scialpinismo','alpinismo','multitiri','ghiaccio','falesia','sci_alpino','misto','drytooling','freeride'];
+const TRAINING = ['dita_trave','forza','resistenza','palestra','boulder','corsa','bici'];
+const TIPO_LABELS = {
+  scialpinismo:'Scialpinismo', alpinismo:'Alpinismo', multitiri:'Multitiri', ghiaccio:'Cascata di ghiaccio',
+  falesia:'Falesia', sci_alpino:'Sci alpino', misto:'Misto', drytooling:'Drytooling', freeride:'Freeride',
+  dita_trave:'Dita - trave', forza:'Forza', resistenza:'Resistenza', palestra:'Arrampicata palestra',
+  boulder:'Boulder', corsa:'Corsa', bici:'Bici'
+};
+function tipoLabel(t){ return TIPO_LABELS[t] || t || '—'; }
+function categoryOf(tipo){ return TRAINING.includes(tipo) ? 'allenamento' : 'alpinistica'; }
+function stripeClassFor(tipo){ return categoryOf(tipo)==='allenamento' ? 'teal' : ''; }
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function uid(){ return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const p = d.split('-');
+  if(p.length!==3) return d;
+  return `${p[2]}.${p[1]}.${p[0]}`;
+}
+const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const MONTH_NAMES_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const WEEKDAY_HDRS = ['L','M','M','G','V','S','D'];
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function compressPhoto(file, cb){
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 700;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      cb(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   NAVIGATION: drawer + push-style view switching
+============================================================ */
+const VIEW_ORDER = ['diario','materiale','statistiche'];
+let currentView = 'diario';
+
+function openDrawer(){ document.getElementById('drawer').classList.add('show'); document.getElementById('drawerBackdrop').classList.add('show'); }
+function closeDrawer(){ document.getElementById('drawer').classList.remove('show'); document.getElementById('drawerBackdrop').classList.remove('show'); }
+document.getElementById('menuBtn').onclick = openDrawer;
+document.getElementById('drawerBackdrop').onclick = closeDrawer;
+
+function switchView(target){
+  closeDrawer();
+  if(target === currentView) return;
+  const curIdx = VIEW_ORDER.indexOf(currentView);
+  const tgtIdx = VIEW_ORDER.indexOf(target);
+  const forward = tgtIdx > curIdx;
+  const curEl = document.getElementById('view-'+currentView);
+  const tgtEl = document.getElementById('view-'+target);
+  tgtEl.style.transition = 'none';
+  tgtEl.style.transform = forward ? 'translateX(100%)' : 'translateX(-100%)';
+  void tgtEl.offsetWidth;
+  tgtEl.style.transition = '';
+  requestAnimationFrame(()=>{
+    curEl.style.transform = forward ? 'translateX(-100%)' : 'translateX(100%)';
+    tgtEl.style.transform = 'translateX(0)';
+  });
+  currentView = target;
+  document.querySelectorAll('.drawer-item[data-view]').forEach(el=> el.classList.toggle('active', el.dataset.view===target));
+  document.getElementById('fabBtn').classList.toggle('hidden', target==='statistiche');
+  if(target==='statistiche'){ renderStatsPage(); renderCalendar(); }
+  if(target==='materiale'){ renderMateriali(); }
+}
+document.querySelectorAll('.drawer-item[data-view]').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+
+document.getElementById('fabBtn').onclick = () => {
+  if(currentView==='materiale') openMaterialeForm(null);
+  else openForm(null);
+};
+
+/* ============================================================
+   SEARCH TOGGLE
+============================================================ */
+const searchWrap = document.getElementById('searchWrap');
+document.getElementById('searchToggle').addEventListener('click', ()=>{
+  const willOpen = !searchWrap.classList.contains('open');
+  searchWrap.classList.toggle('open', willOpen);
+  if(willOpen){ setTimeout(()=>document.getElementById('searchInput').focus(), 200); }
+  else { document.getElementById('searchInput').value=''; render(); }
+});
+
+/* ============================================================
+   STATE + STORAGE (unchanged keys — same as previous versions)
+============================================================ */
+let items = [];
+let editingId = null;
+let pendingPhotos = [];
+let activeCategory = ''; // '' | 'alpinistica' | 'allenamento'
+let activeZona = '';
+const STORAGE_KEY = 'attivita-diario';
+const LEGACY_VIE_KEY = 'vie-diario';
+const LEGACY_ALL_KEY = 'allenamenti-diario';
+
+function migrateLegacyData(){
+  try{
+    const legacyVieRaw = localStorage.getItem(LEGACY_VIE_KEY);
+    const legacyAllRaw = localStorage.getItem(LEGACY_ALL_KEY);
+    if(!legacyVieRaw && !legacyAllRaw) return [];
+    let migrated = [];
+    if(legacyVieRaw){
+      const legacyVie = JSON.parse(legacyVieRaw);
+      migrated = migrated.concat(legacyVie.map(r => ({
+        id: r.id || uid(), nome: r.nome || '', montagna: r.montagna || '', zona: r.zona || '', grado: r.grado || '',
+        tipo: r.tipo === 'multipitch' ? 'multitiri' : (r.tipo === 'trekking' ? 'misto' : (r.tipo || 'falesia')),
+        data: r.data || '', conChi: r.conChi || '', dislivello: r.dislivello || '', tempoImpiegato: r.tempoImpiegato || '',
+        perClienti: !!r.perClienti, commentoTecnico: r.commentoTecnico || r.noteClienti || '',
+        commentoPersonale: r.commentoPersonale || r.noteRicordo || '', foto: r.foto || []
+      })));
+    }
+    if(legacyAllRaw){
+      const legacyAll = JSON.parse(legacyAllRaw);
+      const map = {dita:'dita_trave', forza:'forza', resistenza:'resistenza', tecnica:'palestra', falesia:'palestra', corsa:'corsa', altro:'bici'};
+      migrated = migrated.concat(legacyAll.map(t => ({
+        id: t.id || uid(), nome: tipoLabel(map[t.tipo] || 'palestra'), montagna:'', zona:'', grado:'',
+        tipo: map[t.tipo] || 'palestra', data: t.data || '', conChi:'', dislivello:'',
+        tempoImpiegato: t.durata ? (t.durata + ' min') : '', perClienti:false, commentoTecnico:'',
+        commentoPersonale: t.note || '', foto: []
+      })));
+    }
+    return migrated;
+  }catch(e){ return []; }
+}
+async function loadItems(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ items = JSON.parse(raw); }
+    else{
+      const migrated = migrateLegacyData();
+      items = migrated;
+      if(migrated.length){ await saveItems(); showToast('Dati precedenti importati automaticamente'); }
+    }
+  }catch(e){ items = []; }
+  render();
+  maybeNudgeBackup();
+}
+async function saveItems(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  catch(e){ showToast('Spazio esaurito — esporta un backup e libera spazio'); }
+}
+function maybeNudgeBackup(){
+  if(items.length === 0) return;
+  const last = localStorage.getItem(STORAGE_KEY + ':lastBackupNudge');
+  const now = Date.now();
+  if(!last || (now - parseInt(last)) > 14*24*60*60*1000){
+    localStorage.setItem(STORAGE_KEY + ':lastBackupNudge', String(now));
+    setTimeout(()=> showToast('Promemoria: esporta un backup ogni tanto'), 900);
+  }
+}
+
+/* ============================================================
+   PILLS (category + zone + clienti)
+============================================================ */
+function renderPills(){
+  const wrap = document.getElementById('pillRow');
+  const zonaLabel = activeZona || 'Zona';
+  wrap.innerHTML = `
+    <div class="pill ${activeCategory===''?'active-orange':''}" data-action="cat" data-val="">Tutte</div>
+    <div class="pill ${activeCategory==='alpinistica'?'active-orange':''}" data-action="cat" data-val="alpinistica">Alpinistiche</div>
+    <div class="pill ${activeCategory==='allenamento'?'active-teal':''}" data-action="cat" data-val="allenamento">Allenamenti</div>
+    <div class="pill ${activeZona?'active-gold':''}" data-action="zone">📍 ${escapeHtml(zonaLabel)}</div>
+    <label class="pill" style="gap:6px;"><input type="checkbox" id="filterCliente" style="accent-color:var(--orange);"> Clienti</label>
+  `;
+  wrap.querySelectorAll('.pill[data-action="cat"]').forEach(el=>{
+    el.addEventListener('click', ()=>{ activeCategory = el.dataset.val; renderPills(); render(); });
+  });
+  const zoneEl = wrap.querySelector('.pill[data-action="zone"]');
+  if(zoneEl) zoneEl.addEventListener('click', openZonePicker);
+  const clienteChk = document.getElementById('filterCliente');
+  if(clienteChk) clienteChk.addEventListener('change', render);
+}
+
+/* ============================================================
+   ZONE PICKER (bottom sheet)
+============================================================ */
+function openZonePicker(){
+  const zone = [...new Set(items.map(i=>i.zona).filter(Boolean))].sort();
+  const inner = document.getElementById('zoneBottomSheetInner');
+  inner.innerHTML = `
+    <div class="bsheet-title">Scegli zona</div>
+    <div class="list-row ${activeZona===''?'active':''}" data-zona="">Tutte le zone</div>
+    ${zone.map(z=>`<div class="list-row ${activeZona===z?'active':''}" data-zona="${escapeHtml(z)}">${escapeHtml(z)}</div>`).join('') || '<div class="note-line">Nessuna zona registrata ancora.</div>'}
+  `;
+  inner.querySelectorAll('.list-row').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      activeZona = el.dataset.zona;
+      closeBottomSheets();
+      renderPills();
+      render();
+    });
+  });
+  openBottomSheet('zoneBottomSheet');
+}
+function openBottomSheet(id){
+  document.getElementById('bsheetBackdrop').classList.add('show');
+  document.getElementById(id).classList.add('show');
+}
+function closeBottomSheets(){
+  document.getElementById('bsheetBackdrop').classList.remove('show');
+  document.getElementById('zoneBottomSheet').classList.remove('show');
+  document.getElementById('dayListBottomSheet').classList.remove('show');
+}
+document.getElementById('bsheetBackdrop').onclick = closeBottomSheets;
+
+/* ============================================================
+   FEED (timeline of "gear tag" cards)
+============================================================ */
+function getFiltered(){
+  const q = (document.getElementById('searchInput').value||'').trim().toLowerCase();
+  const clienteChk = document.getElementById('filterCliente');
+  const soloClienti = clienteChk ? clienteChk.checked : false;
+  return items
+    .filter(i => !q || (i.nome+' '+i.zona+' '+i.grado+' '+(i.montagna||'')+' '+tipoLabel(i.tipo)).toLowerCase().includes(q))
+    .filter(i => !activeCategory || categoryOf(i.tipo)===activeCategory)
+    .filter(i => !activeZona || i.zona===activeZona)
+    .filter(i => !soloClienti || i.perClienti)
+    .sort((a,b) => (b.data||'').localeCompare(a.data||''));
+}
+function render(){
+  document.getElementById('diarioCount').textContent = `${items.length} attività registrate`;
+  const wrap = document.getElementById('feedWrap');
+  const list = getFiltered();
+  if(items.length===0){
+    wrap.innerHTML = `<div class="empty"><b>Il diario è vuoto</b>Registra la tua prima attività: una via, un'uscita, o una seduta di allenamento.</div>`;
+    return;
+  }
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty"><b>Nessun risultato</b>Prova a cambiare i filtri.</div>`;
+    return;
+  }
+  let html = '';
+  let lastMonthKey = '';
+  list.forEach(i=>{
+    const monthKey = (i.data||'').slice(0,7);
+    const label = i.data ? `${MONTH_NAMES[parseInt(i.data.slice(5,7),10)-1]} ${i.data.slice(0,4)}` : 'Senza data';
+    if(monthKey !== lastMonthKey){
+      html += `<div class="month-hdr">${label}</div>`;
+      lastMonthKey = monthKey;
+    }
+    html += tagCardHtml(i);
+  });
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.tag-card').forEach(el=> el.addEventListener('click', ()=> openDetail(el.dataset.id)));
+}
+function tagCardHtml(i){
+  const stripe = stripeClassFor(i.tipo);
+  const dayNum = i.data ? parseInt(i.data.slice(8,10),10) : '–';
+  const monAbbr = i.data ? MONTH_NAMES_SHORT[parseInt(i.data.slice(5,7),10)-1] : '';
+  const thumbs = (i.foto||[]).slice(0,4).map(p=>`<img src="${p}">`).join('');
+  const note = i.commentoTecnico || i.commentoPersonale || '';
+  return `
+  <div class="tag-card" data-id="${i.id}">
+    <div class="tag-stripe ${stripe}"></div>
+    <div class="tag-hole"></div>
+    ${i.perClienti ? '<div class="tag-client">CLIENTI</div>' : ''}
+    <div class="tag-date"><div class="day">${dayNum}</div><div class="mon">${monAbbr}</div></div>
+    <div class="tag-body">
+      <div class="tag-title">${escapeHtml(i.nome||tipoLabel(i.tipo))}</div>
+      <div class="tag-tags">
+        <span class="tag-chip">${tipoLabel(i.tipo)}</span>
+        ${i.grado ? `<span class="tag-chip">${escapeHtml(i.grado)}</span>` : ''}
+        ${i.montagna ? `<span class="tag-chip">${escapeHtml(i.montagna)}</span>` : ''}
+        ${i.zona ? `<span class="tag-chip">${escapeHtml(i.zona)}</span>` : ''}
+      </div>
+      ${note ? `<div class="tag-snippet">${escapeHtml(note)}</div>` : ''}
+      ${thumbs ? `<div class="tag-thumbs">${thumbs}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   DETAIL SHEET (full-screen "journal page")
+============================================================ */
+function openDetail(id){
+  const i = items.find(x=>x.id===id);
+  if(!i) return;
+  const catColor = categoryOf(i.tipo)==='allenamento' ? 'var(--teal)' : 'var(--orange)';
+  const inner = document.getElementById('detailSheetInner');
+  inner.innerHTML = `
+    <div class="sheet-topbar">
+      <button class="round-btn" id="closeDetail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+      <div class="sheet-topbar-actions">
+        <button class="round-btn" id="editBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button class="round-btn" id="deleteBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-7 0 1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"/></svg></button>
+      </div>
+    </div>
+    <div class="sheet-content">
+      <div class="stamp-row">
+        <span class="stamp" style="color:${catColor};">${tipoLabel(i.tipo)}</span>
+        ${i.grado ? `<span class="stamp" style="color:var(--gold);">${escapeHtml(i.grado)}</span>` : ''}
+        ${i.perClienti ? `<span class="stamp" style="color:var(--danger);">Per clienti</span>` : ''}
+      </div>
+      <div class="journal-title">${escapeHtml(i.nome||tipoLabel(i.tipo))}</div>
+      <div class="journal-meta">
+        <span>${fmtDate(i.data)}</span>
+        ${i.montagna ? `<span>${escapeHtml(i.montagna)}</span>` : ''}
+        ${i.zona ? `<span>${escapeHtml(i.zona)}</span>` : ''}
+        ${i.conChi ? `<span>Con: ${escapeHtml(i.conChi)}</span>` : ''}
+        ${i.dislivello ? `<span>${escapeHtml(i.dislivello)}</span>` : ''}
+        ${i.tempoImpiegato ? `<span>${escapeHtml(i.tempoImpiegato)}</span>` : ''}
+      </div>
+      ${i.commentoTecnico ? `<div class="box-label">Commento tecnico</div><div class="field-note-box">${escapeHtml(i.commentoTecnico)}</div>` : ''}
+      ${i.commentoPersonale ? `<div class="box-label">Commento personale</div><div class="diary-note-box">${escapeHtml(i.commentoPersonale)}</div>` : ''}
+      ${(i.foto && i.foto.length) ? `<div class="box-label">Foto</div><div class="photo-grid">${i.foto.map(p=>`<img src="${p}">`).join('')}</div>` : ''}
+    </div>`;
+  document.getElementById('detailSheet').classList.add('show');
+  document.getElementById('closeDetail').onclick = ()=> document.getElementById('detailSheet').classList.remove('show');
+  document.getElementById('deleteBtn').onclick = () => deleteItem(i.id);
+  document.getElementById('editBtn').onclick = () => { document.getElementById('detailSheet').classList.remove('show'); openForm(i.id); };
+}
+async function deleteItem(id){
+  if(!confirm('Eliminare questa attività? Non si può annullare.')) return;
+  items = items.filter(i=>i.id!==id);
+  await saveItems();
+  document.getElementById('detailSheet').classList.remove('show');
+  render();
+  showToast('Eliminata');
+}
+
+/* ============================================================
+   FORM SHEET (create/edit)
+============================================================ */
+function tipoOptionsHtml(selected){
+  const alp = ALPINISTIC.map(t=>`<option value="${t}" ${selected===t?'selected':''}>${tipoLabel(t)}</option>`).join('');
+  const tra = TRAINING.map(t=>`<option value="${t}" ${selected===t?'selected':''}>${tipoLabel(t)}</option>`).join('');
+  return `<optgroup label="Attività alpinistiche">${alp}</optgroup><optgroup label="Allenamenti">${tra}</optgroup>`;
+}
+function openForm(id){
+  editingId = id || null;
+  const i = editingId ? items.find(x=>x.id===editingId) : {};
+  pendingPhotos = (i.foto || []).slice();
+  const inner = document.getElementById('formSheetInner');
+  inner.innerHTML = `
+    <div class="sheet-topbar">
+      <button class="round-btn" id="closeForm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div style="font-family:var(--font-display); font-weight:700; font-size:15px;">${editingId ? 'Modifica attività' : 'Nuova attività'}</div>
+      <div style="width:38px;"></div>
+    </div>
+    <div class="sheet-content">
+      <div class="field"><label>Nome via / attività</label><input type="text" id="f_nome" value="${escapeHtml(i.nome||'')}" placeholder="Es. Via degli Svizzeri"></div>
+      <div class="row2">
+        <div class="field"><label>Nome montagna</label><input type="text" id="f_montagna" value="${escapeHtml(i.montagna||'')}" placeholder="Es. Eiger, Bietschhorn..."></div>
+        <div class="field"><label>Zona / Settore</label><input type="text" id="f_zona" value="${escapeHtml(i.zona||'')}" placeholder="Es. Gimmelwald"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Grado</label><input type="text" id="f_grado" value="${escapeHtml(i.grado||'')}" placeholder="Es. 6a+, PD+, AD"></div>
+        <div class="field"><label>Tipo</label><select id="f_tipo">${tipoOptionsHtml(i.tipo||'falesia')}</select></div>
+      </div>
+      <div class="field"><label>Data</label><input type="date" id="f_data" value="${i.data||''}"></div>
+      <div class="row2">
+        <div class="field"><label>Con chi</label><input type="text" id="f_conChi" value="${escapeHtml(i.conChi||'')}" placeholder="Es. Marco, un cliente..."></div>
+        <div class="field"><label>Dislivello / lunghezza</label><input type="text" id="f_dislivello" value="${escapeHtml(i.dislivello||'')}" placeholder="Es. 600m, 8 tiri"></div>
+      </div>
+      <div class="field"><label>Tempo impiegato</label><input type="text" id="f_tempo" value="${escapeHtml(i.tempoImpiegato||'')}" placeholder="Es. 4h30, mezza giornata"></div>
+      <div class="field"><label class="checkbox-line"><input type="checkbox" id="f_perClienti" ${i.perClienti?'checked':''}> Adatta per clienti</label></div>
+      <div class="field"><label>Commento tecnico</label><textarea id="f_commentoTecnico" placeholder="Accesso, soste, pericoli, materiale, condizioni...">${escapeHtml(i.commentoTecnico||'')}</textarea></div>
+      <div class="field"><label>Commento personale</label><textarea id="f_commentoPersonale" placeholder="Sensazioni, ricordi, chi c'era...">${escapeHtml(i.commentoPersonale||'')}</textarea></div>
+      <div class="field">
+        <label>Foto</label>
+        <div class="photo-upload-zone" id="uploadZone">Clicca per aggiungere foto (max 6)</div>
+        <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+        <div class="photo-preview-strip" id="previewStrip"></div>
+      </div>
+      <div class="actions-row"><button class="ghost" id="cancelForm">Annulla</button><button class="primary" id="saveForm">Salva</button></div>
+    </div>`;
+  renderPreviewStrip();
+  document.getElementById('closeForm').onclick = closeForm;
+  document.getElementById('cancelForm').onclick = closeForm;
+  document.getElementById('uploadZone').onclick = () => document.getElementById('photoInput').click();
+  document.getElementById('photoInput').onchange = handlePhotoInput;
+  document.getElementById('saveForm').onclick = submitForm;
+  document.getElementById('formSheet').classList.add('show');
+}
+function closeForm(){ document.getElementById('formSheet').classList.remove('show'); editingId=null; pendingPhotos=[]; }
+function renderPreviewStrip(){
+  const strip = document.getElementById('previewStrip');
+  strip.innerHTML = pendingPhotos.map((p,idx)=>`<div class="photo-preview"><img src="${p}"><button class="rm" data-idx="${idx}">×</button></div>`).join('');
+  strip.querySelectorAll('.rm').forEach(btn=>{ btn.onclick = () => { pendingPhotos.splice(parseInt(btn.dataset.idx),1); renderPreviewStrip(); }; });
+}
+function handlePhotoInput(e){
+  const files = Array.from(e.target.files).slice(0, 6 - pendingPhotos.length);
+  files.forEach(file => compressPhoto(file, dataUrl => { pendingPhotos.push(dataUrl); renderPreviewStrip(); }));
+  e.target.value = '';
+}
+async function submitForm(){
+  const nome = document.getElementById('f_nome').value.trim();
+  const data = {
+    id: editingId || uid(), nome,
+    montagna: document.getElementById('f_montagna').value.trim(),
+    zona: document.getElementById('f_zona').value.trim(),
+    grado: document.getElementById('f_grado').value.trim(),
+    tipo: document.getElementById('f_tipo').value,
+    data: document.getElementById('f_data').value,
+    conChi: document.getElementById('f_conChi').value.trim(),
+    dislivello: document.getElementById('f_dislivello').value.trim(),
+    tempoImpiegato: document.getElementById('f_tempo').value.trim(),
+    perClienti: document.getElementById('f_perClienti').checked,
+    commentoTecnico: document.getElementById('f_commentoTecnico').value.trim(),
+    commentoPersonale: document.getElementById('f_commentoPersonale').value.trim(),
+    foto: pendingPhotos.slice()
+  };
+  if(editingId){ items = items.map(x => x.id===editingId ? data : x); } else { items.push(data); }
+  await saveItems();
+  closeForm();
+  render();
+  showToast('Attività salvata');
+}
+
+/* ============================================================
+   BACKUP EXPORT / IMPORT (now includes materiale, same as before)
+============================================================ */
+function exportBackup(){
+  const payload = { attivita: items, materiale: materiali };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `diario_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Backup scaricato — controlla i Download del telefono');
+}
+function importBackup(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try{
+      const imported = JSON.parse(ev.target.result);
+      const arrAttivita = Array.isArray(imported) ? imported : (imported.attivita || (imported.vie || []).concat(imported.allenamenti || []));
+      const arrMateriale = Array.isArray(imported) ? [] : (imported.materiale || []);
+      const existingIds = new Set(items.map(i=>i.id));
+      items = items.concat(arrAttivita.filter(i=>!existingIds.has(i.id)));
+      const existingMatIds = new Set(materiali.map(m=>m.id));
+      materiali = materiali.concat(arrMateriale.filter(m=>!existingMatIds.has(m.id)));
+      await saveItems();
+      await saveMateriali();
+      render();
+      renderMateriali();
+      showToast('Backup importato');
+    }catch(err){ showToast('File non valido'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+document.getElementById('drawerExport').onclick = () => { closeDrawer(); exportBackup(); };
+document.getElementById('drawerImport').onclick = () => { closeDrawer(); document.getElementById('importFile').click(); };
+document.getElementById('importFile').onchange = importBackup;
+
+/* ============================================================
+   LISTA MATERIALE
+============================================================ */
+let materiali = [];
+let editingMaterialeId = null;
+let pendingMaterialeItems = [];
+const STORAGE_KEY_MATERIALE = 'materiale-diario';
+
+async function loadMateriali(){
+  try{ const raw = localStorage.getItem(STORAGE_KEY_MATERIALE); materiali = raw ? JSON.parse(raw) : []; }
+  catch(e){ materiali = []; }
+  renderMateriali();
+}
+async function saveMateriali(){
+  try{ localStorage.setItem(STORAGE_KEY_MATERIALE, JSON.stringify(materiali)); }
+  catch(e){ showToast('Spazio esaurito — esporta un backup'); }
+}
+function renderMateriali(){
+  const wrap = document.getElementById('materialeGridWrap');
+  if(materiali.length===0){
+    wrap.innerHTML = `<div class="empty"><b>Nessuna lista ancora</b>Crea una lista di materiale — es. "Ghiacciaio estivo" — pronta da copiare e mandare.</div>`;
+    return;
+  }
+  wrap.innerHTML = materiali.map(materialeTagHtml).join('');
+  wrap.querySelectorAll('.tag-card').forEach(el=> el.addEventListener('click', ()=> openMaterialeDetail(el.dataset.id)));
+}
+function materialeTagHtml(m){
+  const preview = (m.items||[]).slice(0,4).join(' · ');
+  return `
+  <div class="tag-card" data-id="${m.id}">
+    <div class="tag-stripe gold"></div>
+    <div class="tag-hole"></div>
+    <div class="tag-body" style="margin-left:6px;">
+      <div class="tag-title">${escapeHtml(m.nome||'Lista senza nome')}</div>
+      <div class="tag-tags"><span class="tag-chip">${(m.items||[]).length} voci</span></div>
+      ${preview ? `<div class="tag-snippet">${escapeHtml(preview)}${(m.items||[]).length>4?'…':''}</div>` : ''}
+    </div>
+  </div>`;
+}
+function openMaterialeDetail(id){
+  const m = materiali.find(x=>x.id===id);
+  if(!m) return;
+  const inner = document.getElementById('materialeDetailSheetInner');
+  inner.innerHTML = `
+    <div class="sheet-topbar">
+      <button class="round-btn" id="closeMaterialeDetail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+      <div class="sheet-topbar-actions">
+        <button class="round-btn" id="editMaterialeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button class="round-btn" id="deleteMaterialeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-7 0 1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"/></svg></button>
+      </div>
+    </div>
+    <div class="sheet-content">
+      <div class="journal-title">${escapeHtml(m.nome)}</div>
+      <div class="box-label">Materiale (${(m.items||[]).length} voci)</div>
+      <div style="margin-bottom:18px;">
+        ${(m.items||[]).length ? m.items.map(it=>`<div class="mat-item-row"><span class="dot"></span><span>${escapeHtml(it)}</span></div>`).join('') : '<div class="note-line">Nessuna voce.</div>'}
+      </div>
+      <div class="actions-row"><button class="primary" id="copyMaterialeBtn">Copia / condividi testo</button></div>
+    </div>`;
+  document.getElementById('materialeDetailSheet').classList.add('show');
+  document.getElementById('closeMaterialeDetail').onclick = ()=> document.getElementById('materialeDetailSheet').classList.remove('show');
+  document.getElementById('deleteMaterialeBtn').onclick = () => deleteMateriale(m.id);
+  document.getElementById('editMaterialeBtn').onclick = () => { document.getElementById('materialeDetailSheet').classList.remove('show'); openMaterialeForm(m.id); };
+  document.getElementById('copyMaterialeBtn').onclick = () => copyMaterialeText(m);
+}
+function materialeToText(m){
+  const righe = (m.items||[]).map(it => `- ${it}`).join('\n');
+  return `${m.nome}\n\n${righe}`;
+}
+async function copyMaterialeText(m){
+  const testo = materialeToText(m);
+  try{
+    if(navigator.share){ await navigator.share({ title: m.nome, text: testo }); return; }
+  }catch(e){ /* condivisione annullata, proviamo comunque a copiare */ }
+  try{
+    await navigator.clipboard.writeText(testo);
+    showToast('Lista copiata — incollala dove vuoi');
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = testo; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{ document.execCommand('copy'); showToast('Lista copiata — incollala dove vuoi'); }
+    catch(err){ showToast('Non sono riuscito a copiare — tieni premuto sul testo'); }
+    document.body.removeChild(ta);
+  }
+}
+async function deleteMateriale(id){
+  if(!confirm('Eliminare questa lista?')) return;
+  materiali = materiali.filter(m=>m.id!==id);
+  await saveMateriali();
+  document.getElementById('materialeDetailSheet').classList.remove('show');
+  renderMateriali();
+  showToast('Lista eliminata');
+}
+function openMaterialeForm(id){
+  editingMaterialeId = id || null;
+  const m = editingMaterialeId ? materiali.find(x=>x.id===editingMaterialeId) : {};
+  pendingMaterialeItems = (m.items || []).slice();
+  const inner = document.getElementById('materialeFormSheetInner');
+  inner.innerHTML = `
+    <div class="sheet-topbar">
+      <button class="round-btn" id="closeMaterialeForm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div style="font-family:var(--font-display); font-weight:700; font-size:15px;">${editingMaterialeId ? 'Modifica lista' : 'Nuova lista'}</div>
+      <div style="width:38px;"></div>
+    </div>
+    <div class="sheet-content">
+      <div class="field"><label>Nome lista</label><input type="text" id="mf_nome" value="${escapeHtml(m.nome||'')}" placeholder="Es. Ghiacciaio estivo"></div>
+      <div class="field">
+        <label>Voci</label>
+        <div id="materialeItemsWrap"></div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <input type="text" id="mf_newItem" placeholder="Es. Piccozza, ramponi, imbrago..." style="flex:1;">
+          <button class="ghost" id="mf_addItem">+ Aggiungi</button>
+        </div>
+      </div>
+      <div class="actions-row"><button class="ghost" id="cancelMaterialeForm">Annulla</button><button class="primary" id="saveMaterialeForm">Salva lista</button></div>
+    </div>`;
+  renderMaterialeItemsWrap();
+  document.getElementById('closeMaterialeForm').onclick = closeMaterialeForm;
+  document.getElementById('cancelMaterialeForm').onclick = closeMaterialeForm;
+  document.getElementById('saveMaterialeForm').onclick = submitMaterialeForm;
+  document.getElementById('mf_addItem').onclick = addMaterialeItem;
+  document.getElementById('mf_newItem').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); addMaterialeItem(); } });
+  document.getElementById('materialeFormSheet').classList.add('show');
+}
+function renderMaterialeItemsWrap(){
+  const wrap = document.getElementById('materialeItemsWrap');
+  if(!pendingMaterialeItems.length){
+    wrap.innerHTML = `<div class="note-line">Nessuna voce ancora — aggiungine una qui sotto.</div>`;
+    return;
+  }
+  wrap.innerHTML = pendingMaterialeItems.map((it,idx)=>`
+    <div class="mat-item-row"><span class="dot"></span>
+      <div style="flex:1;">${escapeHtml(it)}</div>
+      <button class="rm" data-idx="${idx}" style="position:static; background:var(--danger); color:#fff; border:none; width:18px; height:18px; border-radius:50%; font-size:11px; cursor:pointer;">×</button>
+    </div>`).join('');
+  wrap.querySelectorAll('.rm').forEach(btn=>{
+    btn.onclick = () => { pendingMaterialeItems.splice(parseInt(btn.dataset.idx),1); renderMaterialeItemsWrap(); };
+  });
+}
+function addMaterialeItem(){
+  const input = document.getElementById('mf_newItem');
+  const val = input.value.trim();
+  if(!val) return;
+  pendingMaterialeItems.push(val);
+  input.value = '';
+  renderMaterialeItemsWrap();
+  input.focus();
+}
+function closeMaterialeForm(){ document.getElementById('materialeFormSheet').classList.remove('show'); editingMaterialeId=null; pendingMaterialeItems=[]; }
+async function submitMaterialeForm(){
+  const nome = document.getElementById('mf_nome').value.trim();
+  if(!nome){ showToast('Serve un nome per la lista'); return; }
+  const data = { id: editingMaterialeId || uid(), nome, items: pendingMaterialeItems.slice() };
+  if(editingMaterialeId){ materiali = materiali.map(m => m.id===editingMaterialeId ? data : m); } else { materiali.push(data); }
+  await saveMateriali();
+  closeMaterialeForm();
+  renderMateriali();
+  showToast('Lista salvata');
+}
+
+/* ============================================================
+   CALENDARIO ATTIVITÀ (same logic, restyled)
+============================================================ */
+let calMode = 'anno';
+let calRefDate = new Date();
+function toKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function startOfWeek(d){
+  const day = (d.getDay()+6)%7;
+  const r = new Date(d); r.setDate(d.getDate()-day); r.setHours(0,0,0,0);
+  return r;
+}
+function buildActivityMap(){
+  const map = {};
+  items.forEach(i=>{
+    if(!i.data) return;
+    const cat = categoryOf(i.tipo);
+    if(!map[i.data]) map[i.data] = {alp:false, training:false, names:[]};
+    if(cat==='alpinistica') map[i.data].alp = true; else map[i.data].training = true;
+    map[i.data].names.push(i.nome || tipoLabel(i.tipo));
+  });
+  return map;
+}
+function dotClassFor(entry){
+  if(!entry) return '';
+  if(entry.alp && entry.training) return 'dot-both';
+  if(entry.alp) return 'dot-alp';
+  return 'dot-training';
+}
+function navRowHtml(label){
+  return `<div class="cal-nav">
+    <button class="cal-nav-btn" data-dir="-1">‹</button>
+    <div class="cal-title">${label}</div>
+    <button class="cal-nav-btn" data-dir="1">›</button>
+  </div>`;
+}
+function renderMiniMonth(year, month, map){
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let dots = '';
+  for(let d=1; d<=daysInMonth; d++){
+    const key = toKey(new Date(year, month, d));
+    const entry = map[key];
+    dots += `<div class="cal-dot ${dotClassFor(entry)} ${entry?'clickable':''}" ${entry?`data-daykey="${key}"`:''}></div>`;
+  }
+  return `<div><div class="cal-month-title">${MONTH_NAMES_SHORT[month]}</div><div class="cal-dots">${dots}</div></div>`;
+}
+function renderFullMonth(year, month, map){
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const firstDow = (new Date(year, month, 1).getDay()+6)%7;
+  let html = `<div class="cal-month-grid">`;
+  WEEKDAY_HDRS.forEach(w=> html += `<div class="cal-weekday-hdr">${w}</div>`);
+  for(let i=0;i<firstDow;i++) html += `<div class="cal-day-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const key = toKey(new Date(year, month, d));
+    const entry = map[key];
+    html += `<div class="cal-day-cell ${entry?'clickable':''}" ${entry?`data-daykey="${key}"`:''}>
+      <span>${d}</span>
+      ${entry?`<span class="cal-dot ${dotClassFor(entry)}" style="width:7px;height:7px;"></span>`:''}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function weekRangeLabel(start){
+  const end = new Date(start); end.setDate(start.getDate()+6);
+  return `${start.getDate()} ${MONTH_NAMES_SHORT[start.getMonth()]} – ${end.getDate()} ${MONTH_NAMES_SHORT[end.getMonth()]}`;
+}
+function renderWeek(start, map){
+  let html = '';
+  for(let i=0;i<7;i++){
+    const dt = new Date(start); dt.setDate(start.getDate()+i);
+    const key = toKey(dt);
+    const entry = map[key];
+    const label = entry ? entry.names.slice(0,2).join(', ') + (entry.names.length>2?` +${entry.names.length-2}`:'') : 'Nessuna attività';
+    html += `<div class="cal-week-row ${entry?'clickable':''}" ${entry?`data-daykey="${key}"`:''}>
+      <div class="cal-week-date">${DAY_NAMES[i]} ${dt.getDate()}</div>
+      <div class="cal-week-dot ${dotClassFor(entry)}"></div>
+      <div class="cal-week-label">${escapeHtml(label)}</div>
+    </div>`;
+  }
+  return html;
+}
+function renderCalendar(){
+  const wrap = document.getElementById('calendarWrap');
+  if(!wrap) return;
+  const map = buildActivityMap();
+  let html = `
+    <div class="cal-toggle">
+      <div class="cal-tab ${calMode==='settimana'?'active':''}" data-mode="settimana">Settimana</div>
+      <div class="cal-tab ${calMode==='mese'?'active':''}" data-mode="mese">Mese</div>
+      <div class="cal-tab ${calMode==='anno'?'active':''}" data-mode="anno">Anno</div>
+    </div>`;
+  if(calMode === 'anno'){
+    const year = calRefDate.getFullYear();
+    html += navRowHtml(`${year}`);
+    html += `<div class="cal-year-grid">`;
+    for(let m=0;m<12;m++) html += renderMiniMonth(year, m, map);
+    html += `</div>`;
+  } else if(calMode === 'mese'){
+    const year = calRefDate.getFullYear(), month = calRefDate.getMonth();
+    html += navRowHtml(`${MONTH_NAMES[month]} ${year}`);
+    html += renderFullMonth(year, month, map);
+  } else {
+    const start = startOfWeek(calRefDate);
+    html += navRowHtml(weekRangeLabel(start));
+    html += renderWeek(start, map);
+  }
+  html += `<div class="cal-legend">
+      <span><span class="legend-dot" style="background:var(--orange);"></span>Attività alpinistica</span>
+      <span><span class="legend-dot" style="background:var(--teal);"></span>Allenamento</span>
+      <span><span class="legend-dot" style="background:var(--gold);"></span>Entrambi</span>
+    </div>`;
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.cal-tab').forEach(el=>{
+    el.addEventListener('click', ()=>{ calMode = el.dataset.mode; renderCalendar(); });
+  });
+  wrap.querySelectorAll('.cal-nav-btn').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const dir = parseInt(el.dataset.dir);
+      if(calMode==='anno') calRefDate.setFullYear(calRefDate.getFullYear()+dir);
+      else if(calMode==='mese') calRefDate.setMonth(calRefDate.getMonth()+dir);
+      else calRefDate.setDate(calRefDate.getDate()+dir*7);
+      renderCalendar();
+    });
+  });
+  wrap.querySelectorAll('[data-daykey]').forEach(el=>{
+    el.addEventListener('click', ()=> openDayList(el.dataset.daykey));
+  });
+}
+function openDayList(key){
+  const dayItems = items.filter(i=>i.data===key);
+  if(!dayItems.length) return;
+  const inner = document.getElementById('dayListBottomSheetInner');
+  inner.innerHTML = `
+    <div class="bsheet-title">${fmtDate(key)}</div>
+    ${dayItems.map(i=>`<div class="list-row" data-id="${i.id}">${escapeHtml(i.nome||tipoLabel(i.tipo))} <span class="note-line">${tipoLabel(i.tipo)}</span></div>`).join('')}
+  `;
+  inner.querySelectorAll('.list-row').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      closeBottomSheets();
+      openDetail(el.dataset.id);
+    });
+  });
+  openBottomSheet('dayListBottomSheet');
+}
+
+/* ============================================================
+   STATISTICHE (numeri + barre)
+============================================================ */
+function renderStatsPage(){
+  const totItems = items.length;
+  const totAlp = items.filter(i=>categoryOf(i.tipo)==='alpinistica').length;
+  const totAll = items.filter(i=>categoryOf(i.tipo)==='allenamento').length;
+  const zoneUniche = new Set(items.map(i=>i.zona).filter(Boolean)).size;
+
+  const perTipo = {};
+  items.forEach(i=>{ const k = i.tipo || 'altro'; perTipo[k] = (perTipo[k]||0)+1; });
+  const maxTipo = Math.max(1, ...Object.values(perTipo));
+
+  const gradiCount = {};
+  items.forEach(i=>{ if(i.grado) gradiCount[i.grado] = (gradiCount[i.grado]||0)+1; });
+  const topGradi = Object.entries(gradiCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxGrado = Math.max(1, ...topGradi.map(g=>g[1]));
+
+  document.getElementById('statsPageContent').innerHTML = `
+    <div class="big-stats">
+      <div class="big-stat"><div class="num">${totItems}</div><div class="lbl">Attività totali</div></div>
+      <div class="big-stat"><div class="num">${totAlp}</div><div class="lbl">Alpinistiche</div></div>
+      <div class="big-stat"><div class="num">${totAll}</div><div class="lbl">Allenamenti</div></div>
+      <div class="big-stat"><div class="num">${zoneUniche}</div><div class="lbl">Zone diverse</div></div>
+    </div>
+    <div class="stat-block">
+      <h4>Attività per tipo</h4>
+      ${Object.entries(perTipo).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+        <div class="bar-row"><div class="bar-label">${tipoLabel(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxTipo*100)}%"></div></div><div class="bar-val">${v}</div></div>`).join('') || '<div class="note-line">Nessun dato ancora.</div>'}
+    </div>
+    <div class="stat-block">
+      <h4>Gradi più ricorrenti</h4>
+      ${topGradi.map(([k,v])=>`
+        <div class="bar-row"><div class="bar-label">${escapeHtml(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxGrado*100)}%"></div></div><div class="bar-val">${v}</div></div>`).join('') || '<div class="note-line">Nessun dato ancora.</div>'}
+    </div>
+  `;
+}
+
+/* ============================================================
+   WIRE UP + INIT
+============================================================ */
+document.getElementById('searchInput').oninput = render;
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+(async function init(){
+  renderPills();
+  await loadItems();
+  await loadMateriali();
+  renderStatsPage();
+  renderCalendar();
+})();
+</script>
+</body>
+</html>
